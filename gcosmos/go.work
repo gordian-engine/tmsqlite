@@ -1,8 +1,0 @@
-go 1.23.2
-
-use (
-	.
-	..
-	../tmsqlite
-	./_cosmosvendor/cosmos-sdk/simapp/v2
-)

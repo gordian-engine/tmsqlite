@@ -9,7 +9,7 @@ import (
 	"github.com/gordian-engine/gordian/tm/tmconsensus/tmconsensustest"
 	"github.com/gordian-engine/gordian/tm/tmstore"
 	"github.com/gordian-engine/gordian/tm/tmstore/tmstoretest"
-	"github.com/gordian-engine/gordian/tmsqlite"
+	"github.com/gordian-engine/tmsqlite"
 	"github.com/stretchr/testify/require"
 )
 
