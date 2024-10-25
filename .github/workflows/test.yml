@@ -1,4 +1,4 @@
-name: Go Build and Test
+name: Go Test
 
 on:
   pull_request:
@@ -7,9 +7,6 @@ on:
     - '**'
     branches:
     - '**'
-
-env:
-  GORDIAN_TEST_TIME_FACTOR: 4
 
 jobs:
   build:
@@ -22,8 +19,8 @@ jobs:
       with:
         go-version-file: go.mod # Use whatever version is in the header of go.mod.
 
-    - name: Build
-      run: go build ./...
-
-    - name: Test
+    - name: Test (CGo)
       run: go test -race ./...
+
+    - name: Test (Pure Go)
+      run: go test -race -tags=purego ./...
