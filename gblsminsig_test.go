@@ -40,7 +40,7 @@ func blsFixtureFactory(nVals int) *tmconsensustest.Fixture {
 		}
 	}
 
-	return &tmconsensustest.Fixture{
+	fx := &tmconsensustest.Fixture{
 		PrivVals: privVals,
 
 		SignatureScheme:                   tmconsensustest.SimpleSignatureScheme{},
@@ -54,9 +54,17 @@ func blsFixtureFactory(nVals int) *tmconsensustest.Fixture {
 		// Tests are passing currently, but the inability to set those fields
 		// seems likely to cause an issue at some point.
 	}
+
+	// Temporary hack to ensure that the fixture's unexported fields are set.
+	// Without this, tests panic on "NOT NULL constraint failed: headers.prev_app_state_hash".
+	// But instead of requiring this, we should change Gordian core
+	// to avoid this extra work for the test importer.
+	if nVals > 0 {
+		_ = fx.DefaultGenesis()
+	}
+	return fx
 }
 
 func TestBLSStoreCompliance(t *testing.T) {
-	t.Skip("Not yet passing")
 	testStoreCompliance(t, blsFixtureFactory)
 }

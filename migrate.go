@@ -266,17 +266,27 @@ CREATE TABLE sparse_signatures(
 
 			// Simplified view to input only a commit_proof_id
 			// and get back all the sparse signatures.
+			//
+			// Note, the structure of the proof signatures
+			// is a map with block hash keys,
+			// and values which are slices of sparse signatures.
+			// It is important that the elements in the slices
+			// are loaded from the database in the same order they were inserted.
+			// We assume they are inserted in the application-specific order,
+			// so ordering by the
 			`
-CREATE VIEW proof_signatures(
+CREATE VIEW v_proof_signatures(
   commit_proof_id,
   block_hash,
   key_id,
-  signature
+  signature,
+  sig_rowid
 ) AS SELECT
   blocks.commit_proof_id,
   blocks.block_hash,
   sigs.key_id,
-  sigs.signature
+  sigs.signature,
+  sigs.rowid
 FROM commit_proof_block_signatures
 JOIN
   sparse_signatures AS sigs

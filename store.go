@@ -1190,6 +1190,13 @@ func (s *Store) saveCommitProofs(
 		// so this shouldn't grow the args slice.
 		args = args[:0]
 		for _, sig := range sigs {
+			// Important to note that we are respecting the existing order
+			// of key IDs within a set of signature for one proof.
+			// We rely on this insertion order when retrieving it later.
+			// Some signature types, like BLS,
+			// expect a particular ordering,
+			// which we can expect to be set during insert,
+			// but which we need to match when reading back too.
 			args = append(args, sig.KeyID, sig.Sig)
 		}
 
@@ -1236,6 +1243,7 @@ func (s *Store) saveCommitProofs(
 commit_proof_voted_block_id, sparse_signature_id
 ) VALUES (?,?)` +
 		strings.Repeat(", (?,?)", nSigs-1)
+
 	for _, pt := range votedBlocks {
 		for _, sigID := range pt.sigIDs {
 			args = append(args, pt.votedBlockID, sigID)
@@ -1289,9 +1297,9 @@ WHERE committed_headers.header_id = ?`,
 	// Use the commit proof ID to get the actual signatures.
 	rows, err := tx.QueryContext(
 		ctx,
-		`SELECT block_hash, key_id, signature FROM proof_signatures
+		`SELECT block_hash, key_id, signature FROM v_proof_signatures
 WHERE commit_proof_id = ?
-ORDER BY key_id`, // Order not strictly necessary, but convenient for tests.
+ORDER BY sig_rowid`, // We need the returned elements to match the insert order.
 		commitProofID,
 	)
 	if err != nil {
@@ -1544,9 +1552,9 @@ WHERE commit_proofs.id = ?`,
 
 		rows, err := tx.QueryContext(
 			ctx,
-			`SELECT block_hash, key_id, signature FROM proof_signatures
+			`SELECT block_hash, key_id, signature FROM v_proof_signatures
 WHERE commit_proof_id = ?
-ORDER BY key_id`, // Order not strictly necessary, but convenient for tests.
+ORDER BY sig_rowid`, // Needs to match insert order.
 			pcpID.Int64,
 		)
 		if err != nil {
@@ -2350,11 +2358,11 @@ WHERE headers.height = ?1 OR (proposed_headers.height = ?1 AND proposed_headers.
 	rows, err = tx.QueryContext(
 		ctx,
 		`SELECT ps.commit_proof_id, ps.block_hash, ps.key_id, ps.signature
-FROM proof_signatures AS ps
+FROM v_proof_signatures AS ps
 JOIN headers AS hs ON hs.prev_commit_proof_id = ps.commit_proof_id
 JOIN proposed_headers AS phs ON phs.header_id = hs.id
 WHERE hs.height = ?1 OR (phs.height = ?1 AND phs.round = ?2)
-ORDER BY ps.key_id`,
+ORDER BY ps.sig_rowid`,
 		height, round,
 	)
 	if err != nil {
