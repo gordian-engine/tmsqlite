@@ -141,7 +141,7 @@ CREATE TABLE validator_pub_key_hash_entries(
 
 			// View to simplify querying public keys by hash.
 			`
-CREATE VIEW validator_pub_keys_for_hash(
+CREATE VIEW v_validator_pub_keys_for_hash(
   hash_id, hash, n_keys,
   idx, type, key
 ) AS SELECT
@@ -173,7 +173,7 @@ CREATE TABLE validator_power_hash_entries(
 
 			// View to simplify querying powers by hash.
 			`
-CREATE VIEW validator_powers_for_hash(
+CREATE VIEW v_validator_powers_for_hash(
   hash_id, hash, n_powers,
   idx, power
 ) AS SELECT
@@ -374,7 +374,7 @@ CREATE TABLE actions_precommits(
 			// This is not working properly yet when filtering by height,
 			// if any table is lacking a record for that height and column.
 			`
-CREATE VIEW actions(
+CREATE VIEW v_actions(
   height,
   round,
   ph_id,
@@ -458,7 +458,7 @@ CREATE TABLE round_precommit_signatures(
 
 			// Views for getting prevotes and precommits from round_votes.
 			`
-CREATE VIEW round_prevotes(
+CREATE VIEW v_round_prevotes(
   height, round,
   pub_key_hash,
   block_hash,
@@ -473,7 +473,7 @@ JOIN round_votes AS rv ON rv.validators_pub_key_hash_id = keys.id
 JOIN round_prevote_blocks AS blocks ON blocks.round_vote_id = rv.id
 JOIN round_prevote_signatures AS sigs ON sigs.block_id = blocks.id;
 
-CREATE VIEW round_precommits(
+CREATE VIEW v_round_precommits(
   height, round,
   pub_key_hash,
   block_hash,

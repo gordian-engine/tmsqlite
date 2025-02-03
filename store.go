@@ -395,7 +395,7 @@ func (s *Store) LoadPubKeys(ctx context.Context, hash string) ([]gcrypto.PubKey,
 
 	rows, err := s.ro.QueryContext(
 		ctx,
-		`SELECT type, key FROM validator_pub_keys_for_hash WHERE hash = ? ORDER BY idx ASC`,
+		`SELECT type, key FROM v_validator_pub_keys_for_hash WHERE hash = ? ORDER BY idx ASC`,
 		// This is annoying: if you leave the hash as a string,
 		// the string type apparently won't match the blob type,
 		// and so you get a misleading empty result.
@@ -556,11 +556,11 @@ func (s *Store) LoadValidators(ctx context.Context, keyHash, powHash string) ([]
 		ctx,
 		`SELECT keys.type, keys.key, powers.power FROM
 (
-  SELECT type, key, idx FROM validator_pub_keys_for_hash WHERE hash = ? ORDER BY idx ASC
+  SELECT type, key, idx FROM v_validator_pub_keys_for_hash WHERE hash = ? ORDER BY idx ASC
 ) as keys
 JOIN
 (
-  SELECT power, idx FROM validator_powers_for_hash WHERE hash = ? ORDER BY idx ASC
+  SELECT power, idx FROM v_validator_powers_for_hash WHERE hash = ? ORDER BY idx ASC
 ) as powers ON keys.idx = powers.idx
 `,
 		[]byte(keyHash), []byte(powHash),
@@ -801,14 +801,14 @@ WHERE f.height = ?`,
 		// but maybe not because we are joining on the finalizations table?
 		`SELECT keys.type, keys.key, powers.power FROM
 (
-  SELECT type, key, idx FROM validator_pub_keys_for_hash
-    JOIN finalizations ON finalizations.validator_pub_key_hash_id = validator_pub_keys_for_hash.hash_id
+  SELECT type, key, idx FROM v_validator_pub_keys_for_hash
+    JOIN finalizations ON finalizations.validator_pub_key_hash_id = v_validator_pub_keys_for_hash.hash_id
     WHERE finalizations.height = ?1 ORDER BY idx ASC
 ) as keys
 JOIN
 (
-  SELECT power, idx FROM validator_powers_for_hash
-    JOIN finalizations ON finalizations.validator_power_hash_id = validator_powers_for_hash.hash_id
+  SELECT power, idx FROM v_validator_powers_for_hash
+    JOIN finalizations ON finalizations.validator_power_hash_id = v_validator_powers_for_hash.hash_id
     WHERE finalizations.height = ?1 ORDER BY idx ASC
 ) as powers ON keys.idx = powers.idx
 		`,
@@ -1455,7 +1455,7 @@ WHERE
 	// Now we can get the validator public keys.
 	rows, err := tx.QueryContext(
 		ctx,
-		`SELECT idx, type, key FROM validator_pub_keys_for_hash WHERE hash_id = ?`,
+		`SELECT idx, type, key FROM v_validator_pub_keys_for_hash WHERE hash_id = ?`,
 		pkhID,
 	)
 	if err != nil {
@@ -1494,7 +1494,7 @@ WHERE
 	// Same for the powers.
 	rows, err = tx.QueryContext(
 		ctx,
-		`SELECT idx, power FROM validator_powers_for_hash WHERE hash_id = ?`,
+		`SELECT idx, power FROM v_validator_powers_for_hash WHERE hash_id = ?`,
 		vphID,
 	)
 	if err != nil {
@@ -1824,7 +1824,7 @@ func (s *Store) LoadActions(ctx context.Context, height uint64, round uint32) (t
 ph_id,
 pv_block_hash, pv_signature, pv_key_id,
 pc_block_hash, pc_signature, pc_key_id
-FROM actions
+FROM v_actions
 WHERE height = ? AND round = ?`,
 		height, round,
 	).Scan(
@@ -2245,7 +2245,7 @@ func (s *Store) LoadRoundState(ctx context.Context, height uint64, round uint32)
 		ctx,
 		`SELECT
 vpks.hash_id, vpks.hash, vpks.idx, vpks.type, vpks.key, vpks.n_keys
-FROM validator_pub_keys_for_hash AS vpks
+FROM v_validator_pub_keys_for_hash AS vpks
 JOIN headers ON
   (headers.validators_pub_key_hash_id = vpks.hash_id OR headers.next_validators_pub_key_hash_id = vpks.hash_id)
 LEFT JOIN proposed_headers ON
@@ -2308,7 +2308,7 @@ WHERE headers.height = ?1 OR (proposed_headers.height = ?1 AND proposed_headers.
 	rows, err = tx.QueryContext(
 		ctx,
 		`SELECT vps.hash_id, vps.hash, vps.idx, vps.power, vps.n_powers
-FROM validator_powers_for_hash AS vps
+FROM v_validator_powers_for_hash AS vps
 JOIN headers ON
   (headers.validators_power_hash_id = vps.hash_id OR headers.next_validators_power_hash_id = vps.hash_id)
 LEFT JOIN proposed_headers ON
@@ -2580,13 +2580,13 @@ WHERE hs.height = ?1 AND hs.id NOT IN (
 		)
 	}
 
-	prevotes, err = s.loadRoundStateVotes(ctx, tx, height, round, "round_prevotes")
+	prevotes, err = s.loadRoundStateVotes(ctx, tx, height, round, "v_round_prevotes")
 	if err != nil {
 		return nil, prevotes, precommits, fmt.Errorf(
 			"failed to load round state prevotes: %w", err,
 		)
 	}
-	precommits, err = s.loadRoundStateVotes(ctx, tx, height, round, "round_precommits")
+	precommits, err = s.loadRoundStateVotes(ctx, tx, height, round, "v_round_precommits")
 	if err != nil {
 		return nil, prevotes, precommits, fmt.Errorf(
 			"failed to load round state prevotes: %w", err,
@@ -2620,7 +2620,7 @@ func (s *Store) loadRoundStateVotes(
 	defer trace.StartRegion(ctx, "loadRoundStateVotes").End()
 
 	switch tableName {
-	case "round_prevotes", "round_precommits":
+	case "v_round_prevotes", "v_round_precommits":
 		// Okay.
 	default:
 		panic(fmt.Errorf("BUG: illegal table name %s for loadRoundStateVotes", tableName))
